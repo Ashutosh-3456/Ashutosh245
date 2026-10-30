@@ -1,1 +1,36 @@
+name: Hourly Weather Auto-Update
 
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs automatically every hour at minute 0
+  workflow_dispatch: # Allows you to manually trigger it anytime from the GitHub Actions tab
+
+jobs:
+  update-weather:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pandas numpy scikit-learn xgboost joblib requests
+
+      - name: Run Open-Meteo Ingestion & ML Inference
+        run: |
+          python open_meteo.py
+          python predict_grid.py
+
+      - name: Commit and push updated predictions
+        run: |
+          git config --global user.name "SukshmaVrishti Bot"
+          git config --global user.email "bot@sukshmavrishti.local"
+          git add latest_synoptic_weather.json sukshmavrishti_64_cell_predictions.csv latest_khasra_weather_forecast.csv
+          git commit -m "Auto-update hourly weather predictions [skip ci]" || exit 0
+          git push
